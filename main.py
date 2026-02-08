@@ -1,4 +1,5 @@
 import math
+import gymnasium as gym
 
 import pygame
 #Kolory
@@ -13,17 +14,34 @@ screen=pygame.display.set_caption("Self_Driving_Rectangle")
 screen = pygame.display.set_mode((WIDTH,HEIGHT))
 track_surface=pygame.image.load("maps/map1.png").convert()
 
+#Koordynaty Car
+car_width,car_height = 50,30
+start_x = WIDTH//2+50
+start_y = 600-190
+x,y=start_x,start_y
+speed =0
+max_speed=5
+angle=0
+rotation_speed=4
+sensor_data=[]
+offset = math.radians(30)
+
 def isOnTrack(x,y):
     if 0<=x<WIDTH and 0<=y<HEIGHT:
         if track_surface.get_at((int(x),int(y)))[1]<50:
-            print(track_surface.get_at((int(x),int(y))))
+            #print(track_surface.get_at((int(x),int(y))))
             return True
     return False
 
 def getLength(x,y,x1,y1):
     l=(x-x1)**2+(y-y1)**2
     return math.sqrt(l)
-
+def reset():
+    global x,y,angle,speed
+    x=start_x
+    y=start_y
+    angle=0
+    speed=0
 
 
 def get_radar_distance(x, y, angle_rad,accurcy=1,max_steps=100):
@@ -41,15 +59,7 @@ def get_radar_distance(x, y, angle_rad,accurcy=1,max_steps=100):
 
 
 
-#Koordynaty Car
-car_width,car_height = 50,30
-x = WIDTH//2
-y = HEIGHT//2
-speed =0
-max_speed=5
-angle=0
-rotation_speed=4
-sensor_data=[]
+
 
 
 
@@ -60,8 +70,9 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-        
+
     screen.blit(track_surface,(0,0))
+    # if()
     keys=pygame.key.get_pressed()
     if keys[pygame.K_LEFT]:
         angle-=rotation_speed
@@ -76,24 +87,27 @@ while running:
     radians=math.radians(angle)
     x+=speed*math.cos(radians)
     y+=speed*math.sin(radians)
+
     #screen.fill(BLACK)
-    car =pygame.Surface((car_width,car_height),pygame.SRCALPHA)
-    pygame.draw.rect(car,RED,(0,0,50,30))
-    rotated_car=pygame.transform.rotate(car,-angle)
-    rect=rotated_car.get_rect(center=(x,y))
-    screen.blit(rotated_car,rect.topleft)
+    if isOnTrack(x,y):
+        car =pygame.Surface((car_width,car_height),pygame.SRCALPHA)
+        pygame.draw.rect(car,RED,(0,0,50,30))
+        rotated_car=pygame.transform.rotate(car,-angle)
+        rect=rotated_car.get_rect(center=(x,y))
+        screen.blit(rotated_car,rect.topleft)
+        print(get_radar_distance(x,y,radians-offset),
+        get_radar_distance(x,y,radians),
+        get_radar_distance(x,y,radians+offset))
+    else:
+        reset()
 
     #radar
-    offset=math.radians(30)
     # radar1_x=x+math.cos(radians)*150
     # radar1_y=y+math.sin(radians)*150
     # radar2_x=x+math.cos(radians-offset)*150
     # radar2_y=y+math.sin(radians-offset)*150
     # radar3_x=x+math.cos(radians+offset)*150
     # radar3_y=y+math.sin(radians+offset)*150
-    get_radar_distance(x,y,radians-offset)
-    get_radar_distance(x,y,radians)
-    get_radar_distance(x,y,radians+offset)
     # pygame.draw.line(screen,YELLOW,(x,y),(radar1_x,radar1_y),4)
     # pygame.draw.line(screen,YELLOW,(x,y),(radar2_x,radar2_y),4)
     # pygame.draw.line(screen,YELLOW,(x,y),(radar3_x,radar3_y),4)
