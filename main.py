@@ -5,7 +5,8 @@ import pygame
 #Kolory
 WHITE = (255,255,255)
 BLACK = (30,30,30)
-RED = (255,100,100)
+CAR_COLOR=(255,100,100)
+RED = (200,0,0)
 YELLOW = (225,225,100)
 
 WIDTH,HEIGHT = 800,600
@@ -50,10 +51,14 @@ def get_radar_distance(x, y, angle_rad,accurcy=1,max_steps=100):
     x1=x+dx
     y1=y+dy
     steps=0
+    color=YELLOW
     while isOnTrack(x1,y1) and steps<max_steps:
         x1+=dx
         y1+=dy
-    pygame.draw.line(screen,YELLOW,(x,y),(x1,y1),2)
+    l=getLength(x,y,x1,y1)
+    if l<40:
+        color=RED
+    pygame.draw.line(screen,color,(x,y),(x1,y1),2)
     return getLength(x,y,x1,y1)
 
 
@@ -91,7 +96,7 @@ while running:
     #screen.fill(BLACK)
     if isOnTrack(x,y):
         car =pygame.Surface((car_width,car_height),pygame.SRCALPHA)
-        pygame.draw.rect(car,RED,(0,0,50,30))
+        pygame.draw.rect(car,CAR_COLOR,(0,0,50,30))
         rotated_car=pygame.transform.rotate(car,-angle)
         rect=rotated_car.get_rect(center=(x,y))
         screen.blit(rotated_car,rect.topleft)
