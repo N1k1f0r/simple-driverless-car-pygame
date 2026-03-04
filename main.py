@@ -10,10 +10,6 @@ RED = (200,0,0)
 YELLOW = (225,225,100)
 
 WIDTH,HEIGHT = 800,600
-pygame.init()
-screen=pygame.display.set_caption("Self_Driving_Rectangle")
-screen = pygame.display.set_mode((WIDTH,HEIGHT))
-track_surface=pygame.image.load("maps/map1.png").convert()
 
 #Koordynaty Car
 car_width,car_height = 50,30
@@ -27,48 +23,64 @@ rotation_speed=4
 sensor_data=[]
 offset = math.radians(30)
 
-def isOnTrack(x,y):
-    if 0<=x<WIDTH and 0<=y<HEIGHT:
-        if track_surface.get_at((int(x),int(y)))[1]<50:
-            #print(track_surface.get_at((int(x),int(y))))
-            return True
-    return False
+class CarEnv(gym.Env):
+    def __init__(self):
+        self.action_space = gym.spaces.MultiDiscrete([2, 3])  # 2 stany gazu i 3 stany kierunku
+        self.observation_space = gym.spaces.Box(low=0, high=100, shape=(3,), dtype=float)
+        pygame.init()
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        pygame.display.set_caption("Self_Driving_Rectangle")
+        self.track_surface = pygame.image.load("maps/map1.png").convert()
+        self.clock=pygame.time.Clock()
+        self.reset()
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+        self.x,self.y=start_x,start_y
+        self.angle=0
+        self.speed=0
 
-def getLength(x,y,x1,y1):
-    l=(x-x1)**2+(y-y1)**2
-    return math.sqrt(l)
-def reset():
-    global x,y,angle,speed
-    x=start_x
-    y=start_y
-    angle=0
-    speed=0
+    def isOnTrack(self, x, y):
+        if 0 <= x < WIDTH and 0 <= y < HEIGHT:
+            if self.track_surface.get_at((int(x), int(y)))[1] < 50:
+                return True
+        return False
 
-
-def get_radar_distance(x, y, angle_rad,accurcy=1,max_steps=100):
-    dx=math.cos(angle_rad)*accurcy
-    dy=math.sin(angle_rad)*accurcy
-    x1=x+dx
-    y1=y+dy
-    steps=0
-    color=YELLOW
-    while isOnTrack(x1,y1) and steps<max_steps:
-        x1+=dx
-        y1+=dy
-    l=getLength(x,y,x1,y1)
-    if l<40:
-        color=RED
-    pygame.draw.line(screen,color,(x,y),(x1,y1),2)
-    return getLength(x,y,x1,y1)
-
-
+    def get_radar_distance(self,x, y, angle_rad, accurcy=1, max_steps=100):
+        def getLength(x, y, x1, y1):
+            l = (x - x1) ** 2 + (y - y1) ** 2
+            return math.sqrt(l)
+        dx = math.cos(angle_rad) * accurcy
+        dy = math.sin(angle_rad) * accurcy
+        x1 = x + dx
+        y1 = y + dy
+        steps = 0
+        color = YELLOW
+        while self.isOnTrack(x1, y1) and steps < max_steps:
+            x1 += dx
+            y1 += dy
+            steps+=1
+        l = getLength(x, y, x1, y1)
+        if l < 40:
+            color = RED
+        pygame.draw.line(self.screen, color, (x, y), (x1, y1), 2)
+        return getLength(x, y, x1, y1)
 
 
 
 
 
 
-clock=pygame.time.Clock()
+
+
+
+
+
+
+
+
+
+
+
 running=True
 while running:
     for event in pygame.event.get():
@@ -77,7 +89,6 @@ while running:
 
 
     screen.blit(track_surface,(0,0))
-    # if()
     keys=pygame.key.get_pressed()
     if keys[pygame.K_LEFT]:
         angle-=rotation_speed
@@ -106,18 +117,7 @@ while running:
     else:
         reset()
 
-    #radar
-    # radar1_x=x+math.cos(radians)*150
-    # radar1_y=y+math.sin(radians)*150
-    # radar2_x=x+math.cos(radians-offset)*150
-    # radar2_y=y+math.sin(radians-offset)*150
-    # radar3_x=x+math.cos(radians+offset)*150
-    # radar3_y=y+math.sin(radians+offset)*150
-    # pygame.draw.line(screen,YELLOW,(x,y),(radar1_x,radar1_y),4)
-    # pygame.draw.line(screen,YELLOW,(x,y),(radar2_x,radar2_y),4)
-    # pygame.draw.line(screen,YELLOW,(x,y),(radar3_x,radar3_y),4)
 
-    # flip() the display to put your work on screen
     pygame.display.flip()
 
     clock.tick(60)  # limits FPS to 60
