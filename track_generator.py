@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 WIDTH, HEIGHT = 800, 600
 mask = np.zeros((WIDTH, HEIGHT), dtype=bool)
+reverse = True
 
 rng = np.random.default_rng(seed=1)
 
@@ -33,6 +34,8 @@ new_x = np.interp(new_distances,distance_along, closed[:,0])
 new_y=np.interp(new_distances, distance_along, closed[:,1])
 
 centerline = np.column_stack([new_x, new_y])
+if reverse:
+    centerline = np.vstack([centerline[:1], centerline[1:][::-1]])
 centerline_closed = np.vstack([centerline, centerline[:1]])
 centerline_segments = np.hypot(np.diff(centerline_closed[:,0]),np.diff(centerline_closed[:,1]))
 
