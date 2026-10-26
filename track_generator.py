@@ -1,6 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def min_turn_radius(points, step=15):
+    tangent = np.roll(points, -1, axis=0) - np.roll(points, 1, axis=0)
+    heading = np.arctan2(tangent[:, 1], tangent[:, 0])              # kierunek jazdy w każdym punkcie
+    heading_ahead = np.roll(heading, -step)                          # kierunek `step` punktów dalej
+    turn = (heading_ahead - heading + np.pi) % (2 * np.pi) - np.pi   # zmiana kierunku, zawinięta do [-pi, pi)
+    radius = step / np.maximum(np.abs(turn), 1e-9)
+    return radius.min()
+
 WIDTH, HEIGHT = 800, 600
 track_width = 70
 difficulty = 0.75
@@ -52,6 +60,8 @@ centerline = centerline + normal * offset[:, None]
 
 if reverse:
     centerline = np.vstack([centerline[:1], centerline[1:][::-1]])
+min_radius = min_turn_radius(centerline)
+print("min turn radius:", min_radius, "required:", 0.75 * track_width)
 centerline_closed = np.vstack([centerline, centerline[:1]])
 centerline_segments = np.hypot(np.diff(centerline_closed[:,0]),np.diff(centerline_closed[:,1]))
 
@@ -93,6 +103,7 @@ def progress_delta(old_idx, new_idx):
     elif delta < -track_length / 2:
         delta += track_length
     return delta
+
 
 # print(progress_delta(100, 105))
 # print(progress_delta(105, 100))
