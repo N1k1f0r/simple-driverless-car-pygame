@@ -67,11 +67,18 @@ def nearest_index(x, y):
     distances = np.hypot(centerline[:, 0] - x, centerline[:, 1] - y)
     return int(np.argmin(distances))
 
-print(nearest_index(centerline[200, 0], centerline[200, 1]))
-print(nearest_index(centerline[200, 0] + 10, centerline[200, 1] + 10))
+def progress_delta(old_idx, new_idx):
+    delta = arc_length[new_idx] - arc_length[old_idx]
+    if delta > track_length / 2:
+        delta -= track_length
+    elif delta < -track_length / 2:
+        delta += track_length
+    return delta
 
-plt.figure()
-plt.imshow(mask.T, cmap="gray")
-plt.plot(centerline[:,0],centerline[:,1],"r-",lw=0.6)
-plt.arrow(start_pos[0],start_pos[1],40*np.cos(np.radians(start_angle)), 40*np.sin(np.radians(start_angle)),head_width=10,color="green")
-plt.show()
+print(progress_delta(100, 105))
+print(progress_delta(105, 100))
+# plt.figure()
+# plt.imshow(mask.T, cmap="gray")
+# plt.plot(centerline[:,0],centerline[:,1],"r-",lw=0.6)
+# plt.arrow(start_pos[0],start_pos[1],40*np.cos(np.radians(start_angle)), 40*np.sin(np.radians(start_angle)),head_width=10,color="green")
+# plt.show()
