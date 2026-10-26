@@ -1,17 +1,35 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def min_turn_radius(points, step=15):
+def turn_radii(points, step=15):
     tangent = np.roll(points, -1, axis=0) - np.roll(points, 1, axis=0)
-    heading = np.arctan2(tangent[:, 1], tangent[:, 0])              # kierunek jazdy w każdym punkcie
-    heading_ahead = np.roll(heading, -step)                          # kierunek `step` punktów dalej
-    turn = (heading_ahead - heading + np.pi) % (2 * np.pi) - np.pi   # zmiana kierunku, zawinięta do [-pi, pi)
-    radius = step / np.maximum(np.abs(turn), 1e-9)
-    return radius.min()
+    heading = np.arctan2(tangent[:, 1], tangent[:, 0])
+    heading_ahead = np.roll(heading, -step)
+    turn = (heading_ahead - heading + np.pi) % (2 * np.pi) - np.pi
+    return step / np.maximum(np.abs(turn), 1e-9)
+
+def min_turn_radius(points, step=15):
+    return turn_radii(points, step).min()
+
+
+def min_separation(points, width, step=8):
+    sample = points[::step]
+    m = len(sample)
+    idx = np.arange(m)
+
+    dist = np.hypot(sample[:, None, 0] - sample[None, :, 0],
+                    sample[:, None, 1] - sample[None, :, 1])
+
+    gap = np.abs(idx[:, None] - idx[None, :])
+    gap = np.minimum(gap, m - gap)
+
+    far = gap * step > 3 * width
+    return dist[far].min()
 
 WIDTH, HEIGHT = 800, 600
 track_width = 70
 difficulty = 0.75
+waves = 4
 reverse = True
 mask = np.zeros((WIDTH, HEIGHT), dtype=bool)
 
@@ -21,7 +39,7 @@ theta = np.linspace(0, 2*np.pi,400, endpoint =False)
 
 radius_scale=np.ones_like(theta)
 for k in range(1,10):
-    amplitude = 0.1/k
+    amplitude = 0.1/k**2
     phase = rng.uniform(0,2*np.pi)
     radius_scale+=amplitude*np.cos(k*theta+phase)
 
@@ -51,7 +69,7 @@ normal = np.column_stack([-tangent[:, 1], tangent[:, 0]])
 
 n_points = len(centerline)
 s = np.arange(n_points) / n_points
-waves = 4
+
 wave_phase = rng.uniform(0, 2 * np.pi)
 wiggle_amplitude = 0.9 * difficulty * track_width
 offset = wiggle_amplitude * np.sin(2 * np.pi * waves * s + wave_phase)
@@ -61,7 +79,15 @@ centerline = centerline + normal * offset[:, None]
 if reverse:
     centerline = np.vstack([centerline[:1], centerline[1:][::-1]])
 min_radius = min_turn_radius(centerline)
+min_sep = min_separation(centerline, track_width)
 print("min turn radius:", min_radius, "required:", 0.75 * track_width)
+print("min separation: ", min_sep, "required:", 1.05 * track_width)
+
+radius_ok = min_radius >= 0.75 * track_width
+separation_ok = min_sep >= 1.05 * track_width
+is_valid = radius_ok and separation_ok
+
+print("radius ok:", radius_ok, "| separation ok:", separation_ok, "| valid:", is_valid)
 centerline_closed = np.vstack([centerline, centerline[:1]])
 centerline_segments = np.hypot(np.diff(centerline_closed[:,0]),np.diff(centerline_closed[:,1]))
 
