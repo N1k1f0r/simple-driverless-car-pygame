@@ -2,8 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 WIDTH, HEIGHT = 800, 600
-mask = np.zeros((WIDTH, HEIGHT), dtype=bool)
+track_width = 70
+difficulty = 0.75
 reverse = True
+mask = np.zeros((WIDTH, HEIGHT), dtype=bool)
 
 rng = np.random.default_rng(seed=1)
 
@@ -34,12 +36,26 @@ new_x = np.interp(new_distances,distance_along, closed[:,0])
 new_y=np.interp(new_distances, distance_along, closed[:,1])
 
 centerline = np.column_stack([new_x, new_y])
+
+tangent = np.roll(centerline, -1, axis=0) - np.roll(centerline, 1, axis=0)
+tangent /= np.linalg.norm(tangent, axis=1, keepdims=True)
+normal = np.column_stack([-tangent[:, 1], tangent[:, 0]])
+
+n_points = len(centerline)
+s = np.arange(n_points) / n_points
+waves = 4
+wave_phase = rng.uniform(0, 2 * np.pi)
+wiggle_amplitude = 0.9 * difficulty * track_width
+offset = wiggle_amplitude * np.sin(2 * np.pi * waves * s + wave_phase)
+
+centerline = centerline + normal * offset[:, None]
+
 if reverse:
     centerline = np.vstack([centerline[:1], centerline[1:][::-1]])
 centerline_closed = np.vstack([centerline, centerline[:1]])
 centerline_segments = np.hypot(np.diff(centerline_closed[:,0]),np.diff(centerline_closed[:,1]))
 
-track_width = 70
+
 brush_radius = track_width // 2
 
 dx, dy = np.mgrid[-brush_radius:brush_radius + 1, -brush_radius:brush_radius + 1]
@@ -78,10 +94,10 @@ def progress_delta(old_idx, new_idx):
         delta += track_length
     return delta
 
-print(progress_delta(100, 105))
-print(progress_delta(105, 100))
-# plt.figure()
-# plt.imshow(mask.T, cmap="gray")
-# plt.plot(centerline[:,0],centerline[:,1],"r-",lw=0.6)
-# plt.arrow(start_pos[0],start_pos[1],40*np.cos(np.radians(start_angle)), 40*np.sin(np.radians(start_angle)),head_width=10,color="green")
-# plt.show()
+# print(progress_delta(100, 105))
+# print(progress_delta(105, 100))
+plt.figure()
+plt.imshow(mask.T, cmap="gray")
+plt.plot(centerline[:,0],centerline[:,1],"r-",lw=0.6)
+plt.arrow(start_pos[0],start_pos[1],40*np.cos(np.radians(start_angle)), 40*np.sin(np.radians(start_angle)),head_width=10,color="green")
+plt.show()
