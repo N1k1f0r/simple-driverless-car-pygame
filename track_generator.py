@@ -54,14 +54,21 @@ direction = centerline[1]-centerline[0]
 
 start_angle= np.degrees(np.arctan2(direction[1],direction[0]))
 
-print("start: ", start_pos)
-print("kąt startu: ", start_angle)
+# print("start: ", start_pos)
+# print("kąt startu: ", start_angle)
 
 arc_length = np.concatenate([[0], np.cumsum(centerline_segments)[:-1]])
 track_length = centerline_segments.sum()
 
-print(len(centerline), len(arc_length), track_length)
-print(arc_length[:5], arc_length[-3:])
+# print(len(centerline), len(arc_length), track_length)
+# print(arc_length[:5], arc_length[-3:])
+
+def nearest_index(x, y):
+    distances = np.hypot(centerline[:, 0] - x, centerline[:, 1] - y)
+    return int(np.argmin(distances))
+
+print(nearest_index(centerline[200, 0], centerline[200, 1]))
+print(nearest_index(centerline[200, 0] + 10, centerline[200, 1] + 10))
 
 plt.figure()
 plt.imshow(mask.T, cmap="gray")
