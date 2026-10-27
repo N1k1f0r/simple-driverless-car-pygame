@@ -27,13 +27,14 @@ def min_separation(points, width, step=8):
     return dist[far].min()
 
 WIDTH, HEIGHT = 800, 600
-track_width = 70
+track_width = 50
+brush_radius = track_width // 2
 difficulty = 0.75
 waves = 4
 reverse = True
 mask = np.zeros((WIDTH, HEIGHT), dtype=bool)
 
-rng = np.random.default_rng(seed=1)
+rng = np.random.default_rng(seed=2)
 
 theta = np.linspace(0, 2*np.pi,400, endpoint =False)
 
@@ -85,20 +86,22 @@ print("min separation: ", min_sep, "required:", 1.05 * track_width)
 
 radius_ok = min_radius >= 0.75 * track_width
 separation_ok = min_sep >= 1.05 * track_width
-is_valid = radius_ok and separation_ok
+fits_ok = (centerline[:, 0].min() >= brush_radius and centerline[:, 0].max() < WIDTH - brush_radius
+           and centerline[:, 1].min() >= brush_radius and centerline[:, 1].max() < HEIGHT - brush_radius)
 
-print("radius ok:", radius_ok, "| separation ok:", separation_ok, "| valid:", is_valid)
+is_valid = radius_ok and separation_ok and fits_ok
+
+print("radius ok:", radius_ok, "| separation ok:", separation_ok, "| fits ok:", fits_ok, "| valid:", is_valid)
+
+if not is_valid:
+    raise SystemExit("Invalid track: try another seed or lower difficulty")
 centerline_closed = np.vstack([centerline, centerline[:1]])
 centerline_segments = np.hypot(np.diff(centerline_closed[:,0]),np.diff(centerline_closed[:,1]))
 
 
-brush_radius = track_width // 2
 
 dx, dy = np.mgrid[-brush_radius:brush_radius + 1, -brush_radius:brush_radius + 1]
 brush = dx**2 + dy**2 <= brush_radius**2
-
-assert centerline[:, 0].min() >= brush_radius and centerline[:, 0].max() < WIDTH - brush_radius
-assert centerline[:, 1].min() >= brush_radius and centerline[:, 1].max() < HEIGHT - brush_radius
 
 for cx, cy in centerline:
     ix, iy = int(round(cx)), int(round(cy))
