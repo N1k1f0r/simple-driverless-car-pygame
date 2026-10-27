@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from dataclasses import dataclass
 
 def build_centerline(seed, difficulty, track_width, waves=4, reverse=False):
     rng = np.random.default_rng(seed)
@@ -121,7 +122,26 @@ def generate_valid_centerline(seed, difficulty, track_width=50, width=800, heigh
 
     raise RuntimeError(f"No valid track for seed={seed}, difficulty={difficulty} after {max_tries} tries")
 
+@dataclass
+class Track:
+    seed: int
+    difficulty: float
+    track_width: int
+    centerline: np.ndarray
+    mask: np.ndarray
+    start_pos: np.ndarray
+    start_angle: float
+    arc_length: np.ndarray
+    track_length: float
 
+
+def generate_track(seed, difficulty, track_width=50, width=800, height=600):
+    centerline = generate_valid_centerline(seed, difficulty, track_width, width, height)
+    mask = build_mask(centerline, track_width, width, height)
+    start_pos, start_angle = build_start(centerline)
+    arc_length, track_length = build_arc_length(centerline)
+    return Track(seed, difficulty, track_width, centerline, mask,
+                 start_pos, float(start_angle), arc_length, float(track_length))
 WIDTH, HEIGHT = 800, 600
 track_width = 50
 brush_radius = track_width // 2
@@ -140,23 +160,30 @@ arc_length, track_length = build_arc_length(centerline)
 # print(len(centerline), len(arc_length), track_length)
 # print(arc_length[:5], arc_length[-3:])
 
-def nearest_index(x, y):
-    distances = np.hypot(centerline[:, 0] - x, centerline[:, 1] - y)
+def nearest_index(track, x, y):
+    distances = np.hypot(track.centerline[:, 0] - x, track.centerline[:, 1] - y)
     return int(np.argmin(distances))
 
-def progress_delta(old_idx, new_idx):
-    delta = arc_length[new_idx] - arc_length[old_idx]
-    if delta > track_length / 2:
-        delta -= track_length
-    elif delta < -track_length / 2:
-        delta += track_length
-    return delta
+
+def progress_delta(track, old_idx, new_idx):
+    delta = track.arc_length[new_idx] - track.arc_length[old_idx]
+    if delta > track.track_length / 2:
+        delta -= track.track_length
+    elif delta < -track.track_length / 2:
+        delta += track.track_length
+    return float(delta)
 
 
-# print(progress_delta(100, 105))
-# print(progress_delta(105, 100))
-plt.figure()
-plt.imshow(mask.T, cmap="gray")
-plt.plot(centerline[:,0],centerline[:,1],"r-",lw=0.6)
-plt.arrow(start_pos[0],start_pos[1],40*np.cos(np.radians(start_angle)), 40*np.sin(np.radians(start_angle)),head_width=10,color="green")
-plt.show()
+if __name__ == "__main__":
+    track = generate_track(seed=2, difficulty=0.75)
+
+    print("track length:", track.track_length)
+    print("mask sum:", track.mask.sum())
+
+    plt.figure()
+    plt.imshow(track.mask.T, cmap="gray")
+    plt.plot(track.centerline[:, 0], track.centerline[:, 1], "r-", lw=0.6)
+    plt.arrow(track.start_pos[0], track.start_pos[1],
+              40 * np.cos(np.radians(track.start_angle)), 40 * np.sin(np.radians(track.start_angle)),
+              head_width=10, color="green")
+    plt.show()
