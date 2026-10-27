@@ -70,6 +70,18 @@ def min_separation(points, width, step=8):
     far = gap * step > 3 * width
     return dist[far].min()
 
+
+def is_track_valid(centerline, track_width, width, height):
+    brush_radius = track_width // 2
+
+    radius_ok = min_turn_radius(centerline) >= 0.75 * track_width
+    separation_ok = min_separation(centerline, track_width) >= 1.05 * track_width
+    fits_ok = (centerline[:, 0].min() >= brush_radius and centerline[:, 0].max() < width - brush_radius
+               and centerline[:, 1].min() >= brush_radius and centerline[:, 1].max() < height - brush_radius)
+
+    return radius_ok and separation_ok and fits_ok
+
+
 WIDTH, HEIGHT = 800, 600
 track_width = 50
 brush_radius = track_width // 2
@@ -80,19 +92,8 @@ reverse = True
 mask = np.zeros((WIDTH, HEIGHT), dtype=bool)
 
 centerline = build_centerline(seed=seed, difficulty=difficulty, track_width=track_width, waves=waves, reverse=reverse)
-min_radius = min_turn_radius(centerline)
-min_sep = min_separation(centerline, track_width)
-print("min turn radius:", min_radius, "required:", 0.75 * track_width)
-print("min separation: ", min_sep, "required:", 1.05 * track_width)
-
-radius_ok = min_radius >= 0.75 * track_width
-separation_ok = min_sep >= 1.05 * track_width
-fits_ok = (centerline[:, 0].min() >= brush_radius and centerline[:, 0].max() < WIDTH - brush_radius
-           and centerline[:, 1].min() >= brush_radius and centerline[:, 1].max() < HEIGHT - brush_radius)
-
-is_valid = radius_ok and separation_ok and fits_ok
-
-print("radius ok:", radius_ok, "| separation ok:", separation_ok, "| fits ok:", fits_ok, "| valid:", is_valid)
+is_valid = is_track_valid(centerline, track_width, WIDTH, HEIGHT)
+print("valid:", is_valid)
 
 if not is_valid:
     raise SystemExit("Invalid track: try another seed or lower difficulty")
