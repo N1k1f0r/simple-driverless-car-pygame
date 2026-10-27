@@ -81,6 +81,33 @@ def is_track_valid(centerline, track_width, width, height):
 
     return radius_ok and separation_ok and fits_ok
 
+def build_mask(centerline, track_width, width, height):
+    brush_radius = track_width // 2
+    mask = np.zeros((width, height), dtype=bool)
+
+    dx, dy = np.mgrid[-brush_radius:brush_radius + 1, -brush_radius:brush_radius + 1]
+    brush = dx**2 + dy**2 <= brush_radius**2
+
+    for cx, cy in centerline:
+        ix, iy = int(round(cx)), int(round(cy))
+        mask[ix - brush_radius:ix + brush_radius + 1, iy - brush_radius:iy + brush_radius + 1] |= brush
+    return mask
+
+
+def build_arc_length(centerline):
+    closed = np.vstack([centerline, centerline[:1]])
+    segments = np.hypot(np.diff(closed[:, 0]), np.diff(closed[:, 1]))
+    arc_length = np.concatenate([[0], np.cumsum(segments)[:-1]])
+    track_length = segments.sum()
+    return arc_length, track_length
+
+
+def build_start(centerline):
+    start_pos = centerline[0]
+    direction = centerline[1] - centerline[0]
+    start_angle = np.degrees(np.arctan2(direction[1], direction[0]))
+    return start_pos, start_angle
+
 
 WIDTH, HEIGHT = 800, 600
 track_width = 50
@@ -97,28 +124,10 @@ print("valid:", is_valid)
 
 if not is_valid:
     raise SystemExit("Invalid track: try another seed or lower difficulty")
-centerline_closed = np.vstack([centerline, centerline[:1]])
-centerline_segments = np.hypot(np.diff(centerline_closed[:,0]),np.diff(centerline_closed[:,1]))
 
-
-
-dx, dy = np.mgrid[-brush_radius:brush_radius + 1, -brush_radius:brush_radius + 1]
-brush = dx**2 + dy**2 <= brush_radius**2
-
-for cx, cy in centerline:
-    ix, iy = int(round(cx)), int(round(cy))
-    mask[ix - brush_radius:ix + brush_radius + 1, iy - brush_radius:iy + brush_radius + 1] |= brush
-
-start_pos = centerline[0]
-direction = centerline[1]-centerline[0]
-
-start_angle= np.degrees(np.arctan2(direction[1],direction[0]))
-
-# print("start: ", start_pos)
-# print("kąt startu: ", start_angle)
-
-arc_length = np.concatenate([[0], np.cumsum(centerline_segments)[:-1]])
-track_length = centerline_segments.sum()
+mask = build_mask(centerline, track_width, WIDTH, HEIGHT)
+start_pos, start_angle = build_start(centerline)
+arc_length, track_length = build_arc_length(centerline)
 
 # print(len(centerline), len(arc_length), track_length)
 # print(arc_length[:5], arc_length[-3:])
