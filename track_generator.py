@@ -1,6 +1,50 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def build_centerline(seed, difficulty, track_width, waves=4, reverse=False):
+    rng = np.random.default_rng(seed)
+
+    theta = np.linspace(0, 2 * np.pi, 400, endpoint=False)
+    radius_scale = np.ones_like(theta)
+    for k in range(1, 10):
+        amplitude = 0.1 / k**2
+        phase = rng.uniform(0, 2 * np.pi)
+        radius_scale += amplitude * np.cos(k * theta + phase)
+
+    x = 400 + 300 * radius_scale * np.cos(theta)
+    y = 300 + 200 * radius_scale * np.sin(theta)
+    points = np.column_stack([x, y])
+
+    closed = np.vstack([points, points[:1]])
+    dx = np.diff(closed[:, 0])
+    dy = np.diff(closed[:, 1])
+    segment_lengths = np.hypot(dx, dy)
+
+    distance_along = np.concatenate([[0], np.cumsum(segment_lengths)])
+    total_length = distance_along[-1]
+    n = int(total_length)
+    new_distances = np.linspace(0, total_length, n, endpoint=False)
+
+    new_x = np.interp(new_distances, distance_along, closed[:, 0])
+    new_y = np.interp(new_distances, distance_along, closed[:, 1])
+    centerline = np.column_stack([new_x, new_y])
+
+    tangent = np.roll(centerline, -1, axis=0) - np.roll(centerline, 1, axis=0)
+    tangent /= np.linalg.norm(tangent, axis=1, keepdims=True)
+    normal = np.column_stack([-tangent[:, 1], tangent[:, 0]])
+
+    n_points = len(centerline)
+    s = np.arange(n_points) / n_points
+    wave_phase = rng.uniform(0, 2 * np.pi)
+    wiggle_amplitude = 0.9 * difficulty * track_width
+    offset = wiggle_amplitude * np.sin(2 * np.pi * waves * s + wave_phase)
+    centerline = centerline + normal * offset[:, None]
+
+    if reverse:
+        centerline = np.vstack([centerline[:1], centerline[1:][::-1]])
+    return centerline
+
+
 def turn_radii(points, step=15):
     tangent = np.roll(points, -1, axis=0) - np.roll(points, 1, axis=0)
     heading = np.arctan2(tangent[:, 1], tangent[:, 0])
@@ -31,54 +75,11 @@ track_width = 50
 brush_radius = track_width // 2
 difficulty = 0.75
 waves = 4
+seed=2
 reverse = True
 mask = np.zeros((WIDTH, HEIGHT), dtype=bool)
 
-rng = np.random.default_rng(seed=2)
-
-theta = np.linspace(0, 2*np.pi,400, endpoint =False)
-
-radius_scale=np.ones_like(theta)
-for k in range(1,10):
-    amplitude = 0.1/k**2
-    phase = rng.uniform(0,2*np.pi)
-    radius_scale+=amplitude*np.cos(k*theta+phase)
-
-x=400+300*radius_scale*np.cos(theta)
-y=300+200*radius_scale*np.sin(theta)
-points = np.column_stack([x, y])
-
-closed = np.vstack([points, points[:1]])
-
-dx = np.diff(closed[:, 0])
-dy = np.diff(closed[:, 1])
-segment_lengths = np.hypot(dx, dy)
-
-distance_along = np.concatenate([[0], np.cumsum(segment_lengths)])
-total_length = distance_along[-1]
-n=int(total_length)
-new_distances=np.linspace(0, total_length, n, endpoint=False)
-
-new_x = np.interp(new_distances,distance_along, closed[:,0])
-new_y=np.interp(new_distances, distance_along, closed[:,1])
-
-centerline = np.column_stack([new_x, new_y])
-
-tangent = np.roll(centerline, -1, axis=0) - np.roll(centerline, 1, axis=0)
-tangent /= np.linalg.norm(tangent, axis=1, keepdims=True)
-normal = np.column_stack([-tangent[:, 1], tangent[:, 0]])
-
-n_points = len(centerline)
-s = np.arange(n_points) / n_points
-
-wave_phase = rng.uniform(0, 2 * np.pi)
-wiggle_amplitude = 0.9 * difficulty * track_width
-offset = wiggle_amplitude * np.sin(2 * np.pi * waves * s + wave_phase)
-
-centerline = centerline + normal * offset[:, None]
-
-if reverse:
-    centerline = np.vstack([centerline[:1], centerline[1:][::-1]])
+centerline = build_centerline(seed=seed, difficulty=difficulty, track_width=track_width, waves=waves, reverse=reverse)
 min_radius = min_turn_radius(centerline)
 min_sep = min_separation(centerline, track_width)
 print("min turn radius:", min_radius, "required:", 0.75 * track_width)
