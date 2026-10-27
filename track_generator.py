@@ -108,6 +108,19 @@ def build_start(centerline):
     start_angle = np.degrees(np.arctan2(direction[1], direction[0]))
     return start_pos, start_angle
 
+def generate_valid_centerline(seed, difficulty, track_width=50, width=800, height=600, max_tries=100):
+    rng = np.random.default_rng(seed)
+
+    for attempt in range(max_tries):
+        attempt_seed = int(rng.integers(0, 2**31))
+        reverse = bool(rng.integers(0, 2))
+
+        centerline = build_centerline(attempt_seed, difficulty, track_width, reverse=reverse)
+        if is_track_valid(centerline, track_width, width, height):
+            return centerline
+
+    raise RuntimeError(f"No valid track for seed={seed}, difficulty={difficulty} after {max_tries} tries")
+
 
 WIDTH, HEIGHT = 800, 600
 track_width = 50
@@ -118,12 +131,7 @@ seed=2
 reverse = True
 mask = np.zeros((WIDTH, HEIGHT), dtype=bool)
 
-centerline = build_centerline(seed=seed, difficulty=difficulty, track_width=track_width, waves=waves, reverse=reverse)
-is_valid = is_track_valid(centerline, track_width, WIDTH, HEIGHT)
-print("valid:", is_valid)
-
-if not is_valid:
-    raise SystemExit("Invalid track: try another seed or lower difficulty")
+centerline = generate_valid_centerline(seed, difficulty, track_width)
 
 mask = build_mask(centerline, track_width, WIDTH, HEIGHT)
 start_pos, start_angle = build_start(centerline)
